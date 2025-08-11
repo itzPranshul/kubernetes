@@ -107,6 +107,8 @@ func (podStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object
 	newPod.Status = oldPod.Status
 	podutil.DropDisabledPodFields(newPod, oldPod)
 	updatePodGeneration(newPod, oldPod)
+
+	// ensure old AppArmor annotations are converted to the canonical field for updates
 	applyAppArmorVersionSkew(ctx, newPod)
 }
 
