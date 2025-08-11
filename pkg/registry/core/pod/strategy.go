@@ -107,6 +107,7 @@ func (podStrategy) PrepareForUpdate(ctx context.Context, obj, old runtime.Object
 	newPod.Status = oldPod.Status
 	podutil.DropDisabledPodFields(newPod, oldPod)
 	updatePodGeneration(newPod, oldPod)
+	applyAppArmorVersionSkew(ctx, newPod)
 }
 
 // Validate validates a new pod.
