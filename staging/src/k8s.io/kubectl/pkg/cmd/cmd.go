@@ -77,7 +77,7 @@ import (
 	"k8s.io/kubectl/pkg/util/i18n"
 	"k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubectl/pkg/util/term"
-
+	helloworld "k8s.io/kubectl/pkg/cmd/helloworld"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/kubectl/pkg/cmd/kustomize"
 )
@@ -353,6 +353,7 @@ func NewKubectlCommand(o KubectlOptions) *cobra.Command {
 	// From this point and forward we get warnings on flags that contain "_" separators
 	// when adding them with hyphen instead of the original name.
 	cmds.SetGlobalNormalizationFunc(cliflag.WarnWordSepNormalizeFunc)
+	cmds.AddCommand(helloworld.NewHelloWorldCommand())
 
 	flags := cmds.PersistentFlags()
 
