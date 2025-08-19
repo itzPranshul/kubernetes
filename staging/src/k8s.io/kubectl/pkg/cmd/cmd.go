@@ -27,7 +27,7 @@ import (
 	"syscall"
 
 	"github.com/spf13/cobra"
-
+	hellokubernetes "k8s.io/kubectl/pkg/cmd/hellokubernetes"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -354,6 +354,7 @@ func NewKubectlCommand(o KubectlOptions) *cobra.Command {
 	// when adding them with hyphen instead of the original name.
 	cmds.SetGlobalNormalizationFunc(cliflag.WarnWordSepNormalizeFunc)
 	cmds.AddCommand(helloworld.NewHelloWorldCommand())
+	cmds.AddCommand(hellokubernetes.NewHelloKubernetesCommand())
 
 	flags := cmds.PersistentFlags()
 
