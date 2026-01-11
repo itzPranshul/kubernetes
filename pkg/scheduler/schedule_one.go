@@ -75,12 +75,10 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 	}
 
 	pod := podInfo.Pod
-	// TODO(knelasevero): Remove duplicated keys from log entry calls
-	// When contextualized logging hits GA
 	// https://github.com/kubernetes/kubernetes/issues/111672
 	logger = klog.LoggerWithValues(logger, "pod", klog.KObj(pod))
 	ctx = klog.NewContext(ctx, logger)
-	logger.V(4).Info("About to try and schedule pod", "pod", klog.KObj(pod))
+	logger.V(4).Info("About to try and schedule pod")
 
 	fwk, err := sched.frameworkForPod(pod)
 	if err != nil {
@@ -96,7 +94,7 @@ func (sched *Scheduler) ScheduleOne(ctx context.Context) {
 		return
 	}
 
-	logger.V(3).Info("Attempting to schedule pod", "pod", klog.KObj(pod))
+	logger.V(3).Info("Attempting to schedule pod")
 
 	// Synchronously attempt to find a fit for the pod.
 	start := time.Now()
@@ -160,7 +158,7 @@ func (sched *Scheduler) schedulingCycle(
 
 		fitError, ok := err.(*framework.FitError)
 		if !ok {
-			logger.Error(err, "Error selecting node for pod", "pod", klog.KObj(pod))
+			logger.Error(err, "Error selecting node for pod")
 			return ScheduleResult{nominatingInfo: clearNominatedNode}, podInfo, fwk.AsStatus(err)
 		}
 
@@ -179,9 +177,9 @@ func (sched *Scheduler) schedulingCycle(
 		msg := status.Message()
 		fitError.Diagnosis.PostFilterMsg = msg
 		if status.Code() == fwk.Error {
-			utilruntime.HandleErrorWithContext(ctx, nil, "Status after running PostFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
+			utilruntime.HandleErrorWithContext(ctx, nil, "Status after running PostFilter plugins for pod", "status", msg)
 		} else {
-			logger.V(5).Info("Status after running PostFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
+			logger.V(5).Info("Status after running PostFilter plugins for pod", "status", msg)
 		}
 
 		var nominatingInfo *fwk.NominatingInfo
@@ -292,7 +290,7 @@ func (sched *Scheduler) bindingCycle(
 				NominatedNodeName: scheduleResult.SuggestedHost,
 				NominatingMode:    fwk.ModeOverride,
 			}); err != nil {
-				logger.Error(err, "Failed to update the nominated node name in the binding cycle", "pod", klog.KObj(assumedPod), "nominatedNodeName", scheduleResult.SuggestedHost)
+				logger.Error(err, "Failed to update the nominated node name in the binding cycle", "nominatedNodeName", scheduleResult.SuggestedHost)
 				// We continue the processing because it's not critical enough to stop binding cycles here.
 			}
 		}
@@ -334,7 +332,7 @@ func (sched *Scheduler) bindingCycle(
 	}
 
 	// Calculating nodeResourceString can be heavy. Avoid it if klog verbosity is below 2.
-	logger.V(2).Info("Successfully bound pod to node", "pod", klog.KObj(assumedPod), "node", scheduleResult.SuggestedHost, "evaluatedNodes", scheduleResult.EvaluatedNodes, "feasibleNodes", scheduleResult.FeasibleNodes)
+	logger.V(2).Info("Successfully bound pod to node", "node", scheduleResult.SuggestedHost, "evaluatedNodes", scheduleResult.EvaluatedNodes, "feasibleNodes", scheduleResult.FeasibleNodes)
 	metrics.PodScheduled(schedFramework.ProfileName(), metrics.SinceInSeconds(start))
 	metrics.PodSchedulingAttempts.Observe(float64(assumedPodInfo.Attempts))
 	if assumedPodInfo.InitialAttemptTimestamp != nil {
@@ -342,7 +340,7 @@ func (sched *Scheduler) bindingCycle(
 	}
 	// Count pods scheduled after being flushed from unschedulablePods
 	if assumedPodInfo.WasFlushedFromUnschedulable {
-		logger.V(4).Info("Pod scheduled after flush from unschedulablePods", "pod", klog.KObj(assumedPodInfo.Pod), "unschedulablePlugins", assumedPodInfo.UnschedulablePlugins, "pendingPlugins", assumedPodInfo.PendingPlugins)
+		logger.V(4).Info("Pod scheduled after flush from unschedulablePods", "unschedulablePlugins", assumedPodInfo.UnschedulablePlugins, "pendingPlugins", assumedPodInfo.PendingPlugins)
 		metrics.PodScheduledAfterFlush.Inc()
 	}
 	// Run "postbind" plugins.
@@ -405,7 +403,7 @@ func (sched *Scheduler) skipPodSchedule(ctx context.Context, fwk framework.Frame
 	// Case 1: pod is being deleted.
 	if pod.DeletionTimestamp != nil {
 		fwk.EventRecorder().Eventf(pod, nil, v1.EventTypeWarning, "FailedScheduling", "Scheduling", "skip schedule deleting pod: %v/%v", pod.Namespace, pod.Name)
-		klog.FromContext(ctx).V(3).Info("Skip schedule deleting pod", "pod", klog.KObj(pod))
+		klog.FromContext(ctx).V(3).Info("Skip schedule deleting pod")
 		return true
 	}
 
@@ -414,7 +412,7 @@ func (sched *Scheduler) skipPodSchedule(ctx context.Context, fwk framework.Frame
 	// during its previous scheduling cycle but before getting assumed.
 	isAssumed, err := sched.Cache.IsAssumedPod(pod)
 	if err != nil {
-		utilruntime.HandleErrorWithContext(ctx, err, "Failed to check whether pod is assumed", "pod", klog.KObj(pod))
+		utilruntime.HandleErrorWithContext(ctx, err, "Failed to check whether pod is assumed")
 		return false
 	}
 	return isAssumed
@@ -507,7 +505,7 @@ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, schedFramework 
 		// Record the messages from PreFilter in Diagnosis.PreFilterMsg.
 		msg := s.Message()
 		diagnosis.PreFilterMsg = msg
-		logger.V(5).Info("Status after running PreFilter plugins for pod", "pod", klog.KObj(pod), "status", msg)
+		logger.V(5).Info("Status after running PreFilter plugins for pod", "status", msg)
 		diagnosis.AddPluginStatus(s)
 		return nil, diagnosis, "", nil, nil
 	}
@@ -526,7 +524,7 @@ func (sched *Scheduler) findNodesThatFitPod(ctx context.Context, schedFramework 
 	if len(pod.Status.NominatedNodeName) > 0 || len(nodeHint) > 0 {
 		feasibleNodes, err := sched.evaluateNominatedNode(ctx, pod, schedFramework, state, nodeHint, diagnosis)
 		if err != nil {
-			utilruntime.HandleErrorWithContext(ctx, err, "Evaluation failed on nominated node", "pod", klog.KObj(pod), "node", pod.Status.NominatedNodeName)
+			utilruntime.HandleErrorWithContext(ctx, err, "Evaluation failed on nominated node", "node", pod.Status.NominatedNodeName)
 		}
 		// Nominated node passes all the filters, scheduler is good to assign this node to the pod.
 		if len(feasibleNodes) != 0 {
